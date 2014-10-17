@@ -1,0 +1,163 @@
+from __future__ import division
+
+__author__ = 'ajhr'
+__author__ = 'javierfdr'
+
+from auxiliar import *
+import math
+
+brown_file = "./corpus/taggedBrown.txt"
+en_file = "./corpus/en.txt"
+es_file = "./corpus/es.txt"
+
+def read_data():
+    wb = getTaggedWordsFromFile(brown_file)
+    wen = getWordsFromFile(en_file)
+    wes = getWordsFromFile(es_file)
+
+    return [wb, wen, wes]
+
+# Calculates the probability of the word x appearing
+# in the list of words l. Returns a dictionary
+# of the type {<word,prob>}
+def generate_gram_prob(l):
+    wcount = len(l)
+    word_dic = {}
+
+    for w in l:
+        if w not in word_dic.keys():
+            word_dic[w]  = 1
+        else:
+            word_dic[w]+=1
+
+    # calculates probability by dividing word count and total word
+    div_total = lambda(x): x/wcount
+    prob_dic = {k: div_total(v) for k,v in word_dic.items()}
+    return prob_dic
+
+def ngram_prob(ngram,n):
+    total_ngram = 0
+    for item in ngram.items():
+        total_ngram+=int(item[1])
+
+    div_total = lambda(x): x/total_ngram
+    prob_dic = {k: div_total(v) for k,v in ngram.items()}
+    return prob_dic
+
+def compute_unigram_entropy(ngram_prob):
+    entropy = 0
+    # -sum(p(x)*log(p(x)))
+    for unigram in ngram_prob.items():
+        px = unigram[1]
+        log = math.log(px)
+        entropy+=(px*log)
+    return entropy*-1
+
+def get_bigram_for_unigram(bigram_prob, word):
+    bigrams_with_word = []
+    for bigram in bigram_prob.items():
+        if bigram[0][0]==word:
+            bigrams_with_word.append(bigram)
+    return bigrams_with_word
+
+def compute_bigram_entropy(unigram_prob, bigram_prob):
+    entropy = 0
+    # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
+
+    # takes the form {'bigram': (p(x),sum(p(y|x).log(p(y|x)))}
+    ubprob = {}
+
+    l = len(bigram_prob.items())
+    for bigram,prob in bigram_prob.items():
+        inner_product = prob*math.log(prob)
+        if not ubprob.has_key(bigram[0]):
+            ubprob[bigram[0]] = (unigram_prob[bigram[0]],inner_product)
+        else:
+            inner_sum = (ubprob[bigram[0]][1])+inner_product
+            ubprob[bigram[0]] = (unigram_prob[bigram[0]],inner_sum)
+
+    entropy = 0
+    for item in ubprob.values():
+        entropy+=(item[0]*item[1])
+
+    return entropy*-1
+
+def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
+    entropy = 0
+    # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
+
+    # takes the form {'bigram': (p(x),sum(p(y|x).log(p(y|x)))}
+    ubtprob = {}
+
+    l = len(trigram_prob.items())
+    btprob = {}
+    ubprob = {}
+    s= 0
+    l =len(trigram_prob.items())
+    for trigram, prob in trigram_prob.items():
+        print s/l
+        s+=1
+        inner_product = prob*math.log(prob)
+        bigram_key = (trigram[0],trigram[1])
+        if not btprob.has_key(bigram_key):
+            btprob[bigram_key] = (bigram_prob[bigram_key], prob)
+        else:
+            inner_sum = inner_product +  btprob[bigram_key][1]
+            btprob[bigram_key] = (bigram_prob[bigram_key], inner_sum)
+
+    # computes SUM p(y|x) * p(z|xy)logp(z|xy)
+    # for each bigram
+    for bigram_key, probs in btprob.items():
+        btprob[bigram_key] = probs[0]*probs[1]
+
+    inner_sum = 0
+    inner_product = 0
+    s= 0
+    l =len(btprob.keys())
+    for bigram_key in btprob.keys():
+        print s/l
+        s+=1
+        inner_product = btprob[bigram_key]
+        # we will accum the sums of inner_products for
+        # bigrams starting with each unigram x
+        if not ubprob.has_key(bigram_key[0]):
+            ubprob[bigram_key[0]] = (unigram_prob[bigram_key[0]],inner_product)
+        else:
+            inner_sum = (ubprob[bigram_key[0]][1])+inner_product
+            ubprob[bigram_key[0]] = (unigram_prob[bigram_key[0]],inner_sum)
+
+    entropy = 0
+    for item in ubprob.values():
+        entropy+=(item[0]*item[1])
+
+    return entropy*-1
+
+# Script for running the requested questions
+
+# Read data for three given files
+[wb,wen,wes] = read_data()
+
+# Count unigram, bigrams and trigrams for English Corpora
+[ue,be,te]= countNgrams(wen,0)
+
+# Count unigram, bigrams and trigrams for Spanish Corpora
+#[us,bs,ts]= countNgrams(wes,0)
+
+# Computing the 0-order model of English Corpora
+uniprob = ngram_prob(ue,0)
+#unigram_entropy = compute_unigram_entropy(uniprob)
+print "Unigram entropy"
+#print unigram_entropy
+
+# Computing the 1-order model of English Corpora
+biprob = ngram_prob(be,1)
+#bigram_entropy = compute_bigram_entropy(uniprob,biprob)
+print "Bigram entropy"
+#print bigram_entropy
+
+triprob = ngram_prob(te,2)
+#bigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
+print "Trigram entropy"
+print bigram_entropy
+
+
