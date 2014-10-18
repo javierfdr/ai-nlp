@@ -6,16 +6,15 @@ __author__ = 'javierfdr'
 from auxiliar import *
 import math
 
-brown_file = "./corpus/taggedBrown.txt"
-en_file = "./corpus/en.txt"
-es_file = "./corpus/es.txt"
+brown_file = "./docs/corpus/taggedBrown.txt"
+en_file = "./docs/corpus/en.txt"
+es_file = "./docs/corpus/es.txt"
 
-def read_data():
-    wb = getTaggedWordsFromFile(brown_file)
-    wen = getWordsFromFile(en_file)
-    wes = getWordsFromFile(es_file)
+def read_brown():
+    return getTaggedWordsFromFileTuple(brown_file)
 
-    return [wb, wen, wes]
+def read_data(file):
+    return getWordsFromFile(file)
 
 # Calculates the probability of the word x appearing
 # in the list of words l. Returns a dictionary
@@ -49,7 +48,7 @@ def compute_unigram_entropy(ngram_prob):
     # -sum(p(x)*log(p(x)))
     for unigram in ngram_prob.items():
         px = unigram[1]
-        log = math.log(px)
+        log = math.log(px,2)
         entropy+=(px*log)
     return entropy*-1
 
@@ -67,9 +66,8 @@ def compute_bigram_entropy(unigram_prob, bigram_prob):
     # takes the form {'bigram': (p(x),sum(p(y|x).log(p(y|x)))}
     ubprob = {}
 
-    l = len(bigram_prob.items())
     for bigram,prob in bigram_prob.items():
-        inner_product = prob*math.log(prob)
+        inner_product = prob*math.log(prob,2)
         if not ubprob.has_key(bigram[0]):
             ubprob[bigram[0]] = (unigram_prob[bigram[0]],inner_product)
         else:
@@ -89,15 +87,10 @@ def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
     # takes the form {'bigram': (p(x),sum(p(y|x).log(p(y|x)))}
     ubtprob = {}
 
-    l = len(trigram_prob.items())
     btprob = {}
     ubprob = {}
-    s= 0
-    l =len(trigram_prob.items())
     for trigram, prob in trigram_prob.items():
-        print s/l
-        s+=1
-        inner_product = prob*math.log(prob)
+        inner_product = prob*math.log(prob,2)
         bigram_key = (trigram[0],trigram[1])
         if not btprob.has_key(bigram_key):
             btprob[bigram_key] = (bigram_prob[bigram_key], prob)
@@ -112,11 +105,7 @@ def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
 
     inner_sum = 0
     inner_product = 0
-    s= 0
-    l =len(btprob.keys())
     for bigram_key in btprob.keys():
-        print s/l
-        s+=1
         inner_product = btprob[bigram_key]
         # we will accum the sums of inner_products for
         # bigrams starting with each unigram x
@@ -132,32 +121,81 @@ def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
 
     return entropy*-1
 
-# Script for running the requested questions
+def perplexity(entropy):
+    return math.pow(2,entropy)
 
-# Read data for three given files
-[wb,wen,wes] = read_data()
+def process_corpus(file):
+    print "Processing Corpus: "+file
+    corpus = read_data(file)
+    # Count unigram, bigrams and trigrams for English Corpora
+    [ue,be,te]= countNgrams(corpus,0)
 
-# Count unigram, bigrams and trigrams for English Corpora
-[ue,be,te]= countNgrams(wen,0)
+    # Count unigram, bigrams and trigrams for Spanish Corpora
+    #[us,bs,ts]= countNgrams(wes,0)
 
-# Count unigram, bigrams and trigrams for Spanish Corpora
-#[us,bs,ts]= countNgrams(wes,0)
+    # Computing the 0-order model of English Corpora
+    uniprob = ngram_prob(ue,0)
+    unigram_entropy = compute_unigram_entropy(uniprob)
+    print "Unigram entropy"
+    print unigram_entropy
 
-# Computing the 0-order model of English Corpora
-uniprob = ngram_prob(ue,0)
-#unigram_entropy = compute_unigram_entropy(uniprob)
-print "Unigram entropy"
-#print unigram_entropy
+    # Computing the 1-order model of English Corpora
+    biprob = ngram_prob(be,1)
+    bigram_entropy = compute_bigram_entropy(uniprob,biprob)
+    print "Bigram entropy"
+    print bigram_entropy
 
-# Computing the 1-order model of English Corpora
-biprob = ngram_prob(be,1)
-#bigram_entropy = compute_bigram_entropy(uniprob,biprob)
-print "Bigram entropy"
-#print bigram_entropy
+    triprob = ngram_prob(te,2)
+    trigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
+    print "Trigram entropy"
+    print trigram_entropy
 
-triprob = ngram_prob(te,2)
-#bigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
-print "Trigram entropy"
-print bigram_entropy
+def process_brown():
+    # Script for running the requested questions
+    # Read data for three given files
+    brown_words, brown_wpos = read_brown();
+
+    print "Computing perplexity: full"
+    perplexity = compute_trigram_perplexity(brown_words, len(brown_words))
+    print perplexity
+
+    print "Computing perplexity: half"
+    perplexity = compute_trigram_perplexity(brown_words, int(len(brown_words)/2))
+    print perplexity
+
+    print "Computing perplexity: quarter"
+    perplexity = compute_trigram_perplexity(brown_words, int(len(brown_words)/4))
+    print perplexity
+
+def compute_trigram_perplexity(words, size):
+
+    ue,be,te = countNgrams(words,0,size)
+    # Computing the 0-order mode
+    uniprob = ngram_prob(ue,0)
+    unigram_entropy = compute_unigram_entropy(uniprob)
+    print "UNI ENtropy: "+str(unigram_entropy)
+
+    # Computing the 1-order model
+    biprob = ngram_prob(be,1)
+    bigram_entropy = compute_bigram_entropy(uniprob,biprob)
+    print "BI ENtropy: "+str(bigram_entropy)
+
+    triprob = ngram_prob(te,2)
+    trigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
+    print "TRI ENtropy: "+str(trigram_entropy)
+
+    return perplexity(trigram_entropy)
+
+
+
+#Question 1,2,3
+process_corpus(en_file)
+
+#Question 4
+process_corpus(es_file)
+
+# QUestion 5
+process_brown()
+
 
 

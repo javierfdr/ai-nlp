@@ -46,6 +46,18 @@ def getTaggedWordsFromFile(inF):
     print len(words),'tagged words read'
     return words
 
+def getTaggedWordsFromFileTuple(inF):
+    "get a list of pairs <word,POS> from a text file"
+    lines = map(lambda x:x.replace('\n','').lower(),open(inF).readlines())
+    tagged_words=[]
+    words = []
+    for line in lines:
+        word,pos = line.split('\t')
+        tagged_words.append((word,pos))
+        words.append(word)
+    print len(words),'tagged words read'
+    return (words,tagged_words)
+
 def getTagsFromTaggedWords(l):
     "from a list of tagged words build a list of tags"
     return map(lambda x:x[1],l)
