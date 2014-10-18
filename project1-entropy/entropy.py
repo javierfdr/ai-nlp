@@ -189,13 +189,13 @@ def compute_trigram_perplexity(words, size):
 
 
 #Question 1,2,3
-process_corpus(en_file)
+#process_corpus(en_file)
 
 #Question 4
-process_corpus(es_file)
+#process_corpus(es_file)
 
 # QUestion 5
-process_brown()
+#process_brown()
 
 
 
