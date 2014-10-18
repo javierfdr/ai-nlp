@@ -59,20 +59,23 @@ def get_bigram_for_unigram(bigram_prob, word):
             bigrams_with_word.append(bigram)
     return bigrams_with_word
 
-def compute_bigram_entropy(unigram_prob, bigram_prob):
+def compute_bigram_entropy(unigram_freqs, bigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
 
     # takes the form {'bigram': (p(x),sum(p(y|x).log(p(y|x)))}
     ubprob = {}
 
-    for bigram,prob in bigram_prob.items():
+    for bigram,freq in bigram_freqs.items():
+        unigram_key = bigram[0]
+        uni_freq = unigram_freqs[unigram_key]
+        prob = freq / uni_freq
         inner_product = prob*math.log(prob,2)
-        if not ubprob.has_key(bigram[0]):
-            ubprob[bigram[0]] = (unigram_prob[bigram[0]],inner_product)
+        if not ubprob.has_key(unigram_key):
+            ubprob[unigram_key] = (uni_freq,inner_product)
         else:
-            inner_sum = (ubprob[bigram[0]][1])+inner_product
-            ubprob[bigram[0]] = (unigram_prob[bigram[0]],inner_sum)
+            inner_sum = ubprob[unigram_key][1] + inner_product
+            ubprob[unigram_key] = (uni_freq,inner_sum)
 
     entropy = 0
     for item in ubprob.values():
@@ -80,7 +83,7 @@ def compute_bigram_entropy(unigram_prob, bigram_prob):
 
     return entropy*-1
 
-def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
+def compute_trigram_entropy(unigram_freqs, bigram_freqs, trigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
 
@@ -89,31 +92,32 @@ def compute_trigram_entropy(unigram_prob, bigram_prob, trigram_prob):
 
     btprob = {}
     ubprob = {}
-    for trigram, prob in trigram_prob.items():
-        inner_product = prob*math.log(prob,2)
+    for trigram, freq in trigram_freqs.items():
         bigram_key = (trigram[0],trigram[1])
+        bi_freq = bigram_freqs[bigram_key]
+        prob = freq / bi_freq
+        inner_product = prob*math.log(prob,2)
         if not btprob.has_key(bigram_key):
-            btprob[bigram_key] = (bigram_prob[bigram_key], prob)
+            btprob[bigram_key] = (bi_freq, inner_product)
         else:
-            inner_sum = inner_product +  btprob[bigram_key][1]
-            btprob[bigram_key] = (bigram_prob[bigram_key], inner_sum)
-
-    # computes SUM p(y|x) * p(z|xy)logp(z|xy)
-    # for each bigram
-    for bigram_key, probs in btprob.items():
-        btprob[bigram_key] = probs[0]*probs[1]
+            inner_sum = btprob[bigram_key][1] + inner_product
+            btprob[bigram_key] = (bi_freq, inner_sum)
 
     inner_sum = 0
     inner_product = 0
-    for bigram_key in btprob.keys():
-        inner_product = btprob[bigram_key]
+    for bigram, probs in btprob.items():
+        unigram_key = bigram[0]
+        # computes SUM p(y|x) * p(z|xy)logp(z|xy)
+        # for each bigram
+        uni_freq = unigram_freqs[unigram_key]
+        inner_product = (probs[0]/uni_freq)*probs[1]
         # we will accum the sums of inner_products for
         # bigrams starting with each unigram x
-        if not ubprob.has_key(bigram_key[0]):
-            ubprob[bigram_key[0]] = (unigram_prob[bigram_key[0]],inner_product)
+        if not ubprob.has_key(unigram_key):
+            ubprob[unigram_key] = (uni_freq,inner_product)
         else:
-            inner_sum = (ubprob[bigram_key[0]][1])+inner_product
-            ubprob[bigram_key[0]] = (unigram_prob[bigram_key[0]],inner_sum)
+            inner_sum =  ubprob[unigram_key][1] + inner_product
+            ubprob[unigram_key] = (uni_freq,inner_sum)
 
     entropy = 0
     for item in ubprob.values():
@@ -172,17 +176,17 @@ def compute_trigram_perplexity(words, size):
     ue,be,te = countNgrams(words,0,size)
     # Computing the 0-order mode
     uniprob = ngram_prob(ue,0)
-    unigram_entropy = compute_unigram_entropy(uniprob)
-    print "UNI ENtropy: "+str(unigram_entropy)
+    #unigram_entropy = compute_unigram_entropy(uniprob)
+    #print "UNI Entropy: "+str(unigram_entropy)
 
     # Computing the 1-order model
     biprob = ngram_prob(be,1)
-    bigram_entropy = compute_bigram_entropy(uniprob,biprob)
-    print "BI ENtropy: "+str(bigram_entropy)
+    #bigram_entropy = compute_bigram_entropy(uniprob,biprob)
+    #print "BI Entropy: "+str(bigram_entropy)
 
     triprob = ngram_prob(te,2)
     trigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
-    print "TRI ENtropy: "+str(trigram_entropy)
+    #print "TRI Entropy: "+str(trigram_entropy)
 
     return perplexity(trigram_entropy)
 
