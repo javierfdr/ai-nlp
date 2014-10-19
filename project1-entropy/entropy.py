@@ -59,7 +59,7 @@ def get_bigram_for_unigram(bigram_prob, word):
             bigrams_with_word.append(bigram)
     return bigrams_with_word
 
-def compute_bigram_entropy(unigram_freqs, bigram_freqs):
+def compute_bigram_entropy(unigram_probs, unigram_freqs, bigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
 
@@ -69,13 +69,14 @@ def compute_bigram_entropy(unigram_freqs, bigram_freqs):
     for bigram,freq in bigram_freqs.items():
         unigram_key = bigram[0]
         uni_freq = unigram_freqs[unigram_key]
+        uni_prob = unigram_probs[unigram_key]
         prob = freq / uni_freq
         inner_product = prob*math.log(prob,2)
         if not ubprob.has_key(unigram_key):
-            ubprob[unigram_key] = (uni_freq,inner_product)
+            ubprob[unigram_key] = (uni_prob,inner_product)
         else:
             inner_sum = ubprob[unigram_key][1] + inner_product
-            ubprob[unigram_key] = (uni_freq,inner_sum)
+            ubprob[unigram_key] = (uni_prob,inner_sum)
 
     entropy = 0
     for item in ubprob.values():
@@ -83,7 +84,7 @@ def compute_bigram_entropy(unigram_freqs, bigram_freqs):
 
     return entropy*-1
 
-def compute_trigram_entropy(unigram_freqs, bigram_freqs, trigram_freqs):
+def compute_trigram_entropy(unigram_probs, unigram_freqs, bigram_freqs, trigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
 
@@ -110,14 +111,15 @@ def compute_trigram_entropy(unigram_freqs, bigram_freqs, trigram_freqs):
         # computes SUM p(y|x) * p(z|xy)logp(z|xy)
         # for each bigram
         uni_freq = unigram_freqs[unigram_key]
+        uni_prob = unigram_probs[unigram_key]
         inner_product = (probs[0]/uni_freq)*probs[1]
         # we will accum the sums of inner_products for
         # bigrams starting with each unigram x
         if not ubprob.has_key(unigram_key):
-            ubprob[unigram_key] = (uni_freq,inner_product)
+            ubprob[unigram_key] = (uni_prob,inner_product)
         else:
             inner_sum =  ubprob[unigram_key][1] + inner_product
-            ubprob[unigram_key] = (uni_freq,inner_sum)
+            ubprob[unigram_key] = (uni_prob,inner_sum)
 
     entropy = 0
     for item in ubprob.values():
@@ -144,49 +146,109 @@ def process_corpus(file):
     print unigram_entropy
 
     # Computing the 1-order model of English Corpora
-    biprob = ngram_prob(be,1)
-    bigram_entropy = compute_bigram_entropy(uniprob,biprob)
+    bigram_entropy = compute_bigram_entropy(uniprob,ue,be)
     print "Bigram entropy"
     print bigram_entropy
 
-    triprob = ngram_prob(te,2)
-    trigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
+    trigram_entropy = compute_trigram_entropy(uniprob,ue,be,te)
     print "Trigram entropy"
     print trigram_entropy
+
+def get_perplexities(words, smooth=0, tagged_words={}):
+    print "Computing perplexity: full"
+    p1 = compute_trigram_perplexity(words, len(words),smooth, tagged_words)
+    print p1
+
+    print "Computing perplexity: half"
+    p2 = compute_trigram_perplexity(words, int(len(words)/2),smooth, tagged_words)
+    print p2
+
+    print "Computing perplexity: quarter"
+    p3 = compute_trigram_perplexity(words, int(len(words)/4),smooth, tagged_words)
+    print p3
+
+    return [p1,p2,p3]
+
 
 def process_brown():
     # Script for running the requested questions
     # Read data for three given files
-    brown_words, brown_wpos = read_brown();
+    brown_words, tagged_words = read_brown()
+    print "Brown Words Perplexity \n"
+    get_perplexities(brown_words)
+    print "\nBrown Words POS Perplexity <x',y,z> \n"
+    get_perplexities(brown_words,1,tagged_words)
+    print "\nBrown Words POS Perplexity <x',y',z> \n"
+    get_perplexities(brown_words,2,tagged_words)
+    print "\nBrown Words POS Perplexity <x',y',z'> \n"
+    get_perplexities(brown_words,3,tagged_words)
 
-    print "Computing perplexity: full"
-    perplexity = compute_trigram_perplexity(brown_words, len(brown_words))
-    print perplexity
+# Smooth must be one of [1,2,3]
+def smooth_ngram(ngrams,tagged_words, smooth):
+    smoothed_ngrams = {}
+    for ngram_key, count in ngrams.items():
+        if smooth >0:
+            lenkey = -1
+            if not isinstance(ngram_key,str):
+                key = ngram_key[0]
+                lenkey = len(ngram_key)
+            else:
+                key = ngram_key
+                lenkey = 1
 
-    print "Computing perplexity: half"
-    perplexity = compute_trigram_perplexity(brown_words, int(len(brown_words)/2))
-    print perplexity
+            pos = tagged_words[key]
 
-    print "Computing perplexity: quarter"
-    perplexity = compute_trigram_perplexity(brown_words, int(len(brown_words)/4))
-    print perplexity
+            if lenkey==3:
+                new_key = (pos,ngram_key[1], ngram_key[2])
+            if lenkey==2:
+                new_key = (pos,ngram_key[1])
+            if lenkey==1:
+                new_key = (pos)
 
-def compute_trigram_perplexity(words, size):
+        if smooth >1 and not isinstance(ngram_key,str):
+            key = ngram_key[1]
+            pos = tagged_words[key]
 
-    ue,be,te = countNgrams(words,0,size)
-    # Computing the 0-order mode
+            if len(ngram_key)==3:
+                new_key = (new_key[0],pos, ngram_key[2])
+            if len(ngram_key)==2:
+                new_key = (new_key[0],pos)
+
+        if smooth >2 and not isinstance(ngram_key,str) and len(ngram_key)==3:
+            key = ngram_key[2]
+            pos = tagged_words[key]
+
+            if len(ngram_key)==3:
+                new_key = (new_key[0],new_key[1], pos)
+
+        if not smoothed_ngrams.has_key(new_key):
+            smoothed_ngrams[new_key] = count
+        else:
+            smoothed_ngrams[new_key] = smoothed_ngrams[new_key] + count
+
+    return smoothed_ngrams
+
+
+def compute_trigram_perplexity(words, size, smooth=0, tagged_words={}):
+
+    ue,be,te= countNgrams(words,0,size)
+
+    if smooth>0:
+        ue = smooth_ngram(ue,tagged_words, smooth)
+        be = smooth_ngram(be,tagged_words, smooth)
+        te = smooth_ngram(te,tagged_words, smooth)
+
+    # Computing the 0-order model of English Corpora
     uniprob = ngram_prob(ue,0)
-    #unigram_entropy = compute_unigram_entropy(uniprob)
-    #print "UNI Entropy: "+str(unigram_entropy)
+    unigram_entropy = compute_unigram_entropy(uniprob)
+    print unigram_entropy
 
-    # Computing the 1-order model
-    biprob = ngram_prob(be,1)
-    #bigram_entropy = compute_bigram_entropy(uniprob,biprob)
-    #print "BI Entropy: "+str(bigram_entropy)
+    # Computing the 1-order model of English Corpora
+    bigram_entropy = compute_bigram_entropy(uniprob,ue,be)
+    print bigram_entropy
 
-    triprob = ngram_prob(te,2)
-    trigram_entropy = compute_trigram_entropy(uniprob,biprob,triprob)
-    #print "TRI Entropy: "+str(trigram_entropy)
+    trigram_entropy = compute_trigram_entropy(uniprob,ue,be,te)
+    print trigram_entropy
 
     return perplexity(trigram_entropy)
 
@@ -199,7 +261,8 @@ def compute_trigram_perplexity(words, size):
 #process_corpus(es_file)
 
 # QUestion 5
-#process_brown()
+process_brown()
 
+#Question 6
 
 
