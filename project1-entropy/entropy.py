@@ -1,16 +1,26 @@
 from __future__ import division
 
-__author__ = 'ajhr'
-__author__ = 'javierfdr'
+#---------------------------------------#
+#     Project on Entropy                #
+#  Master in Artificial Intelligence    #
+#  Natural Language Processing          #
+#            UPC                        #
+#                                       #
+#    Alejandro Hernandez                #
+#     Javier Fernandez                  #
+#                                       #
+# --------------------------------------#
 
 from auxiliar import *
 import math
 import sys
+import random
 
 brown_file = "./docs/corpus/taggedBrown.txt"
 en_file = "./docs/corpus/en.txt"
 es_file = "./docs/corpus/es.txt"
 
+# reads tagged brown corpus
 def read_brown():
     return getTaggedWordsFromFileTuple(brown_file)
 
@@ -35,6 +45,7 @@ def generate_gram_prob(l):
     prob_dic = {k: div_total(v) for k,v in word_dic.items()}
     return prob_dic
 
+# calculate the probability of appearance of each word
 def ngram_prob(ngram,n):
     total_ngram = 0
     for item in ngram.items():
@@ -44,6 +55,8 @@ def ngram_prob(ngram,n):
     prob_dic = {k: div_total(v) for k,v in ngram.items()}
     return prob_dic
 
+# Calculates the unigram entropy given the probability of a
+# appearance of each word
 def compute_unigram_entropy(ngram_prob):
     entropy = 0
     # -sum(p(x)*log(p(x)))
@@ -53,6 +66,7 @@ def compute_unigram_entropy(ngram_prob):
         entropy+=(px*log)
     return entropy*-1
 
+# Calculates all the bigram where a specifi unigram (word) appears
 def get_bigram_for_unigram(bigram_prob, word):
     bigrams_with_word = []
     for bigram in bigram_prob.items():
@@ -60,6 +74,8 @@ def get_bigram_for_unigram(bigram_prob, word):
             bigrams_with_word.append(bigram)
     return bigrams_with_word
 
+# Computes de bigram entropy given de unigram probabilities, the unigram
+# frequence and the bigram frequency
 def compute_bigram_entropy(unigram_probs, unigram_freqs, bigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
@@ -85,6 +101,8 @@ def compute_bigram_entropy(unigram_probs, unigram_freqs, bigram_freqs):
 
     return entropy*-1
 
+# Computes de trigram entropy given de unigram probabilities and the unigram, bigram
+# and trigram frequency
 def compute_trigram_entropy(unigram_probs, unigram_freqs, bigram_freqs, trigram_freqs):
     entropy = 0
     # -sum(p(x)*sum(p(y|x)*.log(p(y|x))))
@@ -128,9 +146,12 @@ def compute_trigram_entropy(unigram_probs, unigram_freqs, bigram_freqs, trigram_
 
     return entropy*-1
 
+# Computes perplexity given the entropy
 def perplexity(entropy):
     return math.pow(2,entropy)
 
+# process a corpus file en prints
+# the unigram, bigram and trigram entropy
 def process_corpus(file):
     print "Processing Corpus: "+file
     corpus = read_data(file)
@@ -155,21 +176,16 @@ def process_corpus(file):
     print "Trigram entropy"
     print trigram_entropy
 
+# Obtains the perplexity of full, half and quarter of the trigrams on
+# corpus defined by words
 def get_perplexities(words, smooth=0, tagged_words={}):
-    #print "Computing perplexity: full"
     p1 = compute_trigram_perplexity(words, len(words),smooth, tagged_words)
-    #print p1
-
-    #print "Computing perplexity: half"
     p2 = compute_trigram_perplexity(words, int(len(words)/2),smooth, tagged_words)
-    #print p2
-
-    #print "Computing perplexity: quarter"
     p3 = compute_trigram_perplexity(words, int(len(words)/4),smooth, tagged_words)
-    #print p3
 
     return [p1,p2,p3]
 
+# Pretty print function for entropy and perplexity calculation
 def compute_and_print(func, *args):
     sys.stdout.write("Computing...")
     sys.stdout.flush()
@@ -178,13 +194,14 @@ def compute_and_print(func, *args):
     sys.stdout.flush()
     print "\t".join(map(str,result))
 
-
+# Process the brown corpus to obtain the perplexity of
+# the trigram of full, half and quarter size of it.
 def process_brown():
     # Script for running the requested questions
     # Read data for three given files
     brown_words, tagged_words = read_brown()
     print "\nBrown Words Perplexity \n"
-    print "full\t\thalf\t\tquarter"
+    print "full\t\thalf\t\tquarter <x,y,z>"
     compute_and_print(get_perplexities, brown_words)
 
     print "\nBrown Words POS Perplexity <x',y,z> \n"
@@ -244,7 +261,8 @@ def smooth_ngram(ngrams,tagged_words, smooth):
 
     return smoothed_ngrams
 
-
+# Computes the perplexity of trigrams on corpus word applying the
+# given smooth
 def compute_trigram_perplexity(words, size, smooth=0, tagged_words={}):
 
     ue,be,te= countNgrams(words,0,size)
@@ -256,29 +274,29 @@ def compute_trigram_perplexity(words, size, smooth=0, tagged_words={}):
 
     # Computing the 0-order model of English Corpora
     uniprob = ngram_prob(ue,0)
-    #unigram_entropy = compute_unigram_entropy(uniprob)
-    #print unigram_entropy
-
-    # Computing the 1-order model of English Corpora
-    #bigram_entropy = compute_bigram_entropy(uniprob,ue,be)
-    #print bigram_entropy
-
     trigram_entropy = compute_trigram_entropy(uniprob,ue,be,te)
-    #print trigram_entropy
 
     return perplexity(trigram_entropy)
 
-
-
+print "\n---------------------------------------------------------"
+print "Computing entropies on English corpus (Questions 1,2,3)"
+print "---------------------------------------------------------"
 #Question 1,2,3
 process_corpus(en_file)
 
+
+print "\n---------------------------------------------------------"
+print "Computing entropies on Spanish corpus (Question 4)"
+print "---------------------------------------------------------"
 #Question 4
-#process_corpus(es_file)
+process_corpus(es_file)
 
-# QUestion 5
-#process_brown()
 
-#Question 6
+print "\n----------------------------------------------------------------------------"
+print "Computing perplexities on Brown and Pos-Tagged browned corpus (Questions 5,6)"
+print "-----------------------------------------------------------------------------"
+# Question 5 and 6
+process_brown()
+
 
 
