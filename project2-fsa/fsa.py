@@ -37,6 +37,19 @@ month_letters = ['January',
 'November',
 'December']
 
+month_letters_short = ['Jan',
+'Feb',
+'Mar',
+'Apr',
+'May',
+'Jun',
+'Jul',
+'Aug',
+'Sep',
+'Oct',
+'Nov',
+'Dec']
+
 years = "[1-9]+([0-9]*)"
 days = "(([0-2]?[0-9])|(30|31))"
 months_nums = "(((0)?[1-9])|(10|11|12))"
@@ -45,10 +58,10 @@ def cat_or(l):
     return '|'.join(l)
 
 def cat_scape_or(l):
-    return "\|".join(l)
+    return "(\||\-)".join(l)
 
 def months():
-    return "("+cat_or(month_letters)+")"
+    return "("+"("+cat_or(month_letters)+")"+"|"+"("+cat_or(month_letters_short)+")"+")"
 
 def bracket(w):
     return "\[\["+w+"\]\]"
@@ -59,12 +72,14 @@ def optional_bracket(w):
 def option_c():
     return "(c\.)?"+space()
 
-
 def space():
     return "( )*"
 
 def birth_date():
     return "birth_date\t"
+
+def one_char_trash():
+    return space()+".?"
 
 # defining sub-expressions
 
@@ -73,33 +88,29 @@ def accepts(fsa,word):
 
 # [[[month_letters_regex][ ][days]]],[ ][[[years]]]
 def mdy_matcher():
-    regex_string = birth_date()+optional_bracket(months()+space()+days)+"(,)?"+space()+optional_bracket(years)
+    regex_string = birth_date()+optional_bracket(months()+space()+days)+"(,)?"+space()+optional_bracket(years)+one_char_trash()
     print regex_string
     fsa = compileRE(regex_string)
     return fsa
 
 def dmy_matcher():
-    regex_string = birth_date()+optional_bracket(days+space()+months())+"(,)?"+space()+optional_bracket(years)
+    regex_string = birth_date()+optional_bracket(days+space()+months())+"(,)?"+space()+optional_bracket(years)+one_char_trash()
     print regex_string
     fsa = compileRE(regex_string)
     return fsa
 
 def year_matcher():
-    regex_string = birth_date()+option_c()+optional_bracket(years)
+    regex_string = birth_date()+option_c()+optional_bracket(years)+one_char_trash()
     print regex_string
     fsa = fsa = compileRE(regex_string)
     return fsa
-
-
-
 
 def ymd_matcher():
     l = [years,months_nums,days]
-    regex_string = birth_date()+cat_scape_or(l)
+    regex_string = birth_date()+optional_bracket(cat_scape_or(l))+one_char_trash()
     print regex_string
     fsa = fsa = compileRE(regex_string)
     return fsa
-
 
 # Uniting FSA (union)
 def get_union_fsa():
@@ -122,8 +133,11 @@ def get_union_fsa():
     union_fsa = union_fsa.minimized()
     union_fsa = union_fsa.determinized()
 
+
     return union_fsa
 
+def view_fsa(fsa):
+    fsa.view()
 
 def test_file(file=tfile):
     f = open(file)
@@ -139,8 +153,8 @@ def test_file(file=tfile):
          b = accepts(fsa,line)
          if b:
              count = count+1
-         else:
-             print line
+         #else:
+         #    print line
 
     print "Accuracy: "+str(count*100/total_words)+"% "
 

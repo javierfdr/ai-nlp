@@ -742,13 +742,14 @@ def toFSA(arg):
 def view(str):
     import os, tempfile
     dotfile = tempfile.mktemp()
-    psfile = tempfile.mktemp()
+    psfile = tempfile.mktemp()+".svg"
     open(dotfile, 'w').write(str)
+    print psfile
     dotter = 'dot'
-    psviewer = 'gv'
-    psoptions = '-antialias'
-    os.system("%s -Tps %s -o %s" % (dotter, dotfile, psfile))
-    os.system("%s %s %s&" % (psviewer, psoptions, psfile))
+    psviewer = 'open'
+    psoptions = ''
+    os.system("%s -Tsvg %s -o %s" % (dotter, dotfile, psfile))
+    #os.system("%s %s %s&" % (psviewer, psoptions, psfile))
 
 
 #
