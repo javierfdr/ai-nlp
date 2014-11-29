@@ -746,7 +746,6 @@ def view(str):
     dotfile = tempfile.mktemp()
     psfile = tempfile.mktemp()+".svg"
     open(dotfile, 'w').write(str)
-    print psfile
     dotter = 'dot'
     os.system("%s -Tsvg %s -o %s" % (dotter, dotfile, psfile))
     #psviewer = 'open'
