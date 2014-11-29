@@ -225,6 +225,8 @@ try:
 except ImportError:
     NumFSAUtils = None
 
+import webbrowser
+
 ANY = 'ANY'
 EPSILON = None
 
@@ -746,10 +748,12 @@ def view(str):
     open(dotfile, 'w').write(str)
     print psfile
     dotter = 'dot'
-    psviewer = 'open'
-    psoptions = ''
     os.system("%s -Tsvg %s -o %s" % (dotter, dotfile, psfile))
+    #psviewer = 'open'
+    #psoptions = ''
     #os.system("%s %s %s&" % (psviewer, psoptions, psfile))
+    webbrowser.open("file://"+psfile,1,True)
+
 
 
 #
