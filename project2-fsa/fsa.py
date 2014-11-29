@@ -89,7 +89,7 @@ def accepts(fsa,word):
 # [[[month_letters_regex][ ][days]]],[ ][[[years]]]
 def mdy_matcher():
     regex_string = birth_date()+optional_bracket(months()+space()+days)+"(,)?"+space()+optional_bracket(years)+one_char_trash()
-    print regex_string
+    #print regex_string
     fsa = compileRE(regex_string)
     return fsa
 
