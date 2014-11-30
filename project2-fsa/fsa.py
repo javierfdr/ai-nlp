@@ -21,7 +21,7 @@ import random
 from reCompiler import *
 from FSA import union
 
-tfile = "info/examples_birth_date.txt"
+tfile = workingDir+"/info/examples_birth_date.txt"
 
 # defining constants
 month_letters = ['January',
