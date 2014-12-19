@@ -21,7 +21,7 @@ import random
 from reCompiler import *
 from FSA import union
 
-tfile = "/Users/javierfdr/devel/mai/nlp-practice/repo/nlp/project2-fsa/info/examples_birth_date.txt"
+tfile = workingDir+"/info/examples_birth_date.txt"
 
 # defining constants
 month_letters = ['January',
@@ -89,42 +89,62 @@ def accepts(fsa,word):
 # [[[month_letters_regex][ ][days]]],[ ][[[years]]]
 def mdy_matcher():
     regex_string = birth_date()+optional_bracket(months()+space()+days)+"(,)?"+space()+optional_bracket(years)+one_char_trash()
-    print regex_string
+    #print regex_string
     fsa = compileRE(regex_string)
     return fsa
 
 def dmy_matcher():
     regex_string = birth_date()+optional_bracket(days+space()+months())+"(,)?"+space()+optional_bracket(years)+one_char_trash()
-    print regex_string
+    #print regex_string
     fsa = compileRE(regex_string)
     return fsa
 
 def year_matcher():
     regex_string = birth_date()+option_c()+optional_bracket(years)+one_char_trash()
-    print regex_string
+    #print regex_string
     fsa = fsa = compileRE(regex_string)
     return fsa
 
 def ymd_matcher():
     l = [years,months_nums,days]
     regex_string = birth_date()+optional_bracket(cat_scape_or(l))+one_char_trash()
-    print regex_string
+    #print regex_string
     fsa = fsa = compileRE(regex_string)
     return fsa
 
 # Uniting FSA (union)
-def get_union_fsa():
+def get_union_fsa(printFSA):
     mdy_fsa = mdy_matcher()
-    #print accepts(mdy_fsa, "birth_date\t[[October 14]], [[1964]]")
 
     dmy_fsa = dmy_matcher()
-    #print accepts(dmy_fsa, "birth_date\t[[2 July]], [[1973]]")
 
     y_fsa = year_matcher()
-    #print accepts(y_fsa, "birth_date\t1510")
 
     ymd_fsa = ymd_matcher()
-    #print accepts(ymd_fsa, "birth_date\t1945|01|10")
+
+    if printFSA:
+        print "Visualizing Months Day Years Automata"
+        mdy_fsa.view()
+        print "Testing FSA with example: birth_date\t[[October 14]], [[1964]]"
+        print accepts(mdy_fsa, "birth_date\t[[October 14]], [[1964]]")
+        raw_input("Press Enter to Continue: ")
+
+        print "\033[FVisualizing Day Months Years Automata"
+        dmy_fsa.view()
+        print "Testing FSA with example: birth_date\t[[2 July]], [[1973]]"
+        print accepts(dmy_fsa, "birth_date\t[[2 July]], [[1973]]")
+        raw_input("Press Enter to Continue: ")
+
+        print "\033[FVisualizing Years Automata"
+        y_fsa.view()
+        print "Testing FSA with example: birth_date\t1510"
+        print accepts(y_fsa, "birth_date\t1510")
+        raw_input("Press Enter to Continue: ")
+
+        print "\033[FVisualizing Day Months Years Automata"
+        ymd_fsa.view()
+        print "Testing FSA with example: birth_date\t1945|01|10"
+        print accepts(ymd_fsa, "birth_date\t1945|01|10")
 
     union1_fsa = union(mdy_fsa,dmy_fsa)
     union2_fsa = union(y_fsa, ymd_fsa)
@@ -139,23 +159,30 @@ def get_union_fsa():
 def view_fsa(fsa):
     fsa.view()
 
-def test_file(file=tfile):
+def test_file(file=tfile, printFSA=False, printErrors=False):
+    print "Reading File ..."
     f = open(file)
     lines = f.readlines()
 
+    print "Cleaning lines ..."
     lines = map(str.strip,lines)
 
-    fsa = get_union_fsa()
+    print "Building FSA ..."
+    fsa = get_union_fsa(printFSA)
 
+    print "Testing FSA ..."
     total_words = len(lines)
     count = 0
     for line in lines:
          b = accepts(fsa,line)
          if b:
              count = count+1
-         #else:
-         #    print line
+         else:
+             if printErrors:
+                print line
 
     print "Accuracy: "+str(count*100/total_words)+"% "
 
 
+#test_file()
+test_file(printFSA=True)
