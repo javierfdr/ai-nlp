@@ -27,4 +27,10 @@ phrase(day,"1"). /* true */
 phrase(day,"21"). /* true */
 phrase(day,"31"). /* true */
 phrase(day,"32"). /* false */
- 
+
+/* special cases */ 
+phrase(matchphrase,"birth_date\t[[1885-11-01]]").
+phrase(matchphrase,"birth_date\t[[13 September]], [[1973]]").
+phrase(*(trash),"<!-- not 1844 as often reported -->").
+phrase(matchphrase,"birth_date\tSaturday, [[October 15]], [[1966]]").
+phrase(matchphrase,"birth_date\t[[September]] [[11]], [[1981]]").
